@@ -115,6 +115,8 @@ namespace platf::gamepad {
   // Rumble callback: forward to Moonlight client
   static VOID WINAPI
   rumble_callback(PVOID context, UCHAR left_motor, UCHAR right_motor) {
+    BOOST_LOG(info) << "Rumble callback invoked: left=" << (int)left_motor << " right=" << (int)right_motor;
+
     auto ctx = static_cast<std::pair<feedback_queue_t, std::shared_ptr<winuhid_joypad_state>>*>(context);
     auto &feedback_queue = ctx->first;
     auto &joypad = ctx->second;
@@ -123,12 +125,14 @@ namespace platf::gamepad {
     if (joypad->last_rumble.type == platf::gamepad_feedback_e::rumble &&
         joypad->last_rumble.data.rumble.lowfreq == left_motor &&
         joypad->last_rumble.data.rumble.highfreq == right_motor) {
+      BOOST_LOG(debug) << "Rumble: duplicate, not sending";
       return;
     }
 
     auto msg = gamepad_feedback_msg_t::make_rumble(joypad->client_index, left_motor, right_motor);
     feedback_queue->raise(msg);
     joypad->last_rumble = msg;
+    BOOST_LOG(info) << "Rumble feedback sent to client " << (int)joypad->client_index;
   }
 
   // LED callback: forward to Moonlight client
@@ -160,6 +164,9 @@ namespace platf::gamepad {
   // Trigger effect callback: forward to Moonlight client
   static VOID WINAPI
   trigger_effect_callback(PVOID context, PCWINUHID_PS5_TRIGGER_EFFECT left, PCWINUHID_PS5_TRIGGER_EFFECT right) {
+    BOOST_LOG(info) << "Trigger effect callback invoked: left=" << (left ? "yes" : "no")
+                    << " right=" << (right ? "yes" : "no");
+
     auto ctx = static_cast<std::pair<feedback_queue_t, std::shared_ptr<winuhid_joypad_state>>*>(context);
     auto &feedback_queue = ctx->first;
 
@@ -174,14 +181,17 @@ namespace platf::gamepad {
 
     if (left) {
       std::memcpy(left_data.data(), left->Data, 10);
+      BOOST_LOG(debug) << "Left trigger type=" << (int)type_left;
     }
     if (right) {
       std::memcpy(right_data.data(), right->Data, 10);
+      BOOST_LOG(debug) << "Right trigger type=" << (int)type_right;
     }
 
     auto &joypad = ctx->second;
     feedback_queue->raise(gamepad_feedback_msg_t::make_adaptive_triggers(
       joypad->client_index, event_flags, type_left, type_right, left_data, right_data));
+    BOOST_LOG(info) << "Trigger effect feedback sent to client " << (int)joypad->client_index;
   }
 
   // Mic LED callback: not currently used by Sunshine

@@ -1061,6 +1061,12 @@ namespace input {
       from_clamped_netfloat(packet->pressure, 0.0f, 1.0f),
     };
 
+    BOOST_LOG(debug) << "Received touch packet: controller=" << packet->controllerNumber
+                     << " event=" << packet->eventType
+                     << " pointer=" << util::endian::little(packet->pointerId)
+                     << " x=" << touch.x << " y=" << touch.y
+                     << " pressure=" << touch.pressure;
+
     platf::gamepad_touch(platf_input, touch);
   }
 

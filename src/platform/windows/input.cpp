@@ -16,6 +16,7 @@
 #include <ViGEm/Client.h>
 
 // local includes
+#include "input/winuhid_gamepad.h"
 #include "keylayout.h"
 #include "misc.h"
 #include "src/config.h"
@@ -437,6 +438,9 @@ namespace platf {
     }
 
     vigem_t *vigem;
+
+    // WinUHid gamepads (shared_ptr because joypad state is shared with callbacks)
+    std::vector<std::shared_ptr<void>> gamepads;
 
     decltype(CreateSyntheticPointerDevice) *fnCreateSyntheticPointerDevice;
     decltype(InjectSyntheticPointerInput) *fnInjectSyntheticPointerInput;
@@ -1168,6 +1172,32 @@ namespace platf {
   int alloc_gamepad(input_t &input, const gamepad_id_t &id, const gamepad_arrival_t &metadata, feedback_queue_t feedback_queue) {
     auto raw = (input_raw_t *) input.get();
 
+    // Ensure gamepads vector is large enough
+    if (raw->gamepads.size() <= (size_t)id.globalIndex) {
+      raw->gamepads.resize(id.globalIndex + 1);
+    }
+
+    // Check for DS5 manual selection first (WinUHid path)
+    if (config::input.gamepad == "ds5"sv) {
+      BOOST_LOG(info) << "Gamepad " << id.globalIndex << " will be DualSense 5 controller (manual selection)"sv;
+
+      if (!(metadata.capabilities & (LI_CCAP_ACCEL | LI_CCAP_GYRO))) {
+        BOOST_LOG(warning) << "Gamepad " << id.globalIndex << " is emulating a DualSense 5 controller, but the client gamepad doesn't have motion sensors active"sv;
+      }
+      if (!(metadata.capabilities & LI_CCAP_TOUCHPAD)) {
+        BOOST_LOG(warning) << "Gamepad " << id.globalIndex << " is emulating a DualSense 5 controller, but the client gamepad doesn't have a touchpad"sv;
+      }
+
+      return gamepad::alloc_winuhid(raw, id, metadata, feedback_queue);
+    }
+
+    // Auto-select DS5 based on client capabilities
+    if (metadata.type == LI_CTYPE_PS && (metadata.capabilities & (LI_CCAP_ACCEL | LI_CCAP_GYRO | LI_CCAP_TOUCHPAD))) {
+      BOOST_LOG(info) << "Gamepad " << id.globalIndex << " will be DualSense 5 controller (auto-selected by client-reported type and capabilities)"sv;
+      return gamepad::alloc_winuhid(raw, id, metadata, feedback_queue);
+    }
+
+    // Fall back to ViGEm for X360/DS4
     if (!raw->vigem) {
       return 0;
     }
@@ -1222,6 +1252,13 @@ namespace platf {
   void free_gamepad(input_t &input, int nr) {
     auto raw = (input_raw_t *) input.get();
 
+    // Check if it's a WinUHid gamepad first
+    if (nr >= 0 && (size_t)nr < raw->gamepads.size() && raw->gamepads[nr]) {
+      gamepad::free_winuhid(raw, nr);
+      return;
+    }
+
+    // Otherwise, it's a ViGEm gamepad
     if (!raw->vigem) {
       return;
     }
@@ -1480,7 +1517,16 @@ namespace platf {
    * @param gamepad_state The gamepad button/axis state sent from the client.
    */
   void gamepad_update(input_t &input, int nr, const gamepad_state_t &gamepad_state) {
-    auto vigem = ((input_raw_t *) input.get())->vigem;
+    auto raw = (input_raw_t *) input.get();
+
+    // Check if it's a WinUHid gamepad first
+    if (nr >= 0 && (size_t)nr < raw->gamepads.size() && raw->gamepads[nr]) {
+      gamepad::update_winuhid(raw, nr, gamepad_state);
+      return;
+    }
+
+    // Otherwise, it's a ViGEm gamepad
+    auto vigem = raw->vigem;
 
     // If there is no gamepad support
     if (!vigem) {
@@ -1512,7 +1558,16 @@ namespace platf {
    * @param touch The touch event.
    */
   void gamepad_touch(input_t &input, const gamepad_touch_t &touch) {
-    auto vigem = ((input_raw_t *) input.get())->vigem;
+    auto raw = (input_raw_t *) input.get();
+
+    // Check if it's a WinUHid gamepad first
+    if (touch.id.globalIndex >= 0 && (size_t)touch.id.globalIndex < raw->gamepads.size() && raw->gamepads[touch.id.globalIndex]) {
+      gamepad::touch_winuhid(raw, touch);
+      return;
+    }
+
+    // Otherwise, it's a ViGEm gamepad
+    auto vigem = raw->vigem;
 
     // If there is no gamepad support
     if (!vigem) {
@@ -1618,7 +1673,16 @@ namespace platf {
    * @param motion The motion event.
    */
   void gamepad_motion(input_t &input, const gamepad_motion_t &motion) {
-    auto vigem = ((input_raw_t *) input.get())->vigem;
+    auto raw = (input_raw_t *) input.get();
+
+    // Check if it's a WinUHid gamepad first
+    if (motion.id.globalIndex >= 0 && (size_t)motion.id.globalIndex < raw->gamepads.size() && raw->gamepads[motion.id.globalIndex]) {
+      gamepad::motion_winuhid(raw, motion);
+      return;
+    }
+
+    // Otherwise, it's a ViGEm gamepad
+    auto vigem = raw->vigem;
 
     // If there is no gamepad support
     if (!vigem) {
@@ -1645,7 +1709,16 @@ namespace platf {
    * @param battery The battery event.
    */
   void gamepad_battery(input_t &input, const gamepad_battery_t &battery) {
-    auto vigem = ((input_raw_t *) input.get())->vigem;
+    auto raw = (input_raw_t *) input.get();
+
+    // Check if it's a WinUHid gamepad first
+    if (battery.id.globalIndex >= 0 && (size_t)battery.id.globalIndex < raw->gamepads.size() && raw->gamepads[battery.id.globalIndex]) {
+      gamepad::battery_winuhid(raw, battery);
+      return;
+    }
+
+    // Otherwise, it's a ViGEm gamepad
+    auto vigem = raw->vigem;
 
     // If there is no gamepad support
     if (!vigem) {

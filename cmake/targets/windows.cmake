@@ -6,4 +6,6 @@ list(APPEND SUNSHINE_EXTERNAL_LIBRARIES
         $<TARGET_OBJECTS:sunshine_rc_object>
         Windowsapp.lib
         Wtsapi32.lib
-        version.lib)
+        version.lib
+        "${CMAKE_SOURCE_DIR}/third-party/winuhid/lib/WinUHid.lib"
+        "${CMAKE_SOURCE_DIR}/third-party/winuhid/lib/WinUHidDevs.lib")

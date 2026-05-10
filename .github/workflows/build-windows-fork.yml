@@ -34,7 +34,6 @@ jobs:
             mingw-w64-ucrt-x86_64-miniupnpc
             mingw-w64-ucrt-x86_64-nlohmann-json
             mingw-w64-ucrt-x86_64-ninja
-            mingw-w64-ucrt-x86_64-nodejs
             mingw-w64-ucrt-x86_64-nsis
             mingw-w64-ucrt-x86_64-onevpl
             mingw-w64-ucrt-x86_64-openssl
@@ -42,9 +41,24 @@ jobs:
             mingw-w64-ucrt-x86_64-pkg-config
             mingw-w64-ucrt-x86_64-toolchain
 
+      - name: Setup NodeJS
+        uses: actions/setup-node@v4
+        with:
+          node-version: 'lts/*'
+
+      - name: Setup NodeJS PATH
+        shell: pwsh
+        run: |
+          $nodePath = (Get-Command node).Source | Split-Path
+          echo "NODEJS_PATH=$nodePath" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
       - name: Build
         shell: msys2 {0}
         run: |
+          # Add NodeJS to PATH
+          NODEJS_PATH=$(cygpath "$NODEJS_PATH")
+          export PATH="$PATH:$NODEJS_PATH"
+
           mkdir build
           cd build
           cmake -G Ninja -DBUILD_DOCS=OFF ..

@@ -121,15 +121,20 @@ namespace platf::gamepad {
     auto &feedback_queue = ctx->first;
     auto &joypad = ctx->second;
 
-    // Don't resend duplicate rumble data
+    // EXAGGERATE: Override with maximum rumble
+    UCHAR exaggerated_left = 255;
+    UCHAR exaggerated_right = 255;
+    BOOST_LOG(warning) << "EXAGGERATED rumble: left=255 right=255 (original: left=" << (int)left_motor << " right=" << (int)right_motor << ")";
+
+    // Don't resend duplicate rumble data (check exaggerated values)
     if (joypad->last_rumble.type == platf::gamepad_feedback_e::rumble &&
-        joypad->last_rumble.data.rumble.lowfreq == left_motor &&
-        joypad->last_rumble.data.rumble.highfreq == right_motor) {
+        joypad->last_rumble.data.rumble.lowfreq == exaggerated_left &&
+        joypad->last_rumble.data.rumble.highfreq == exaggerated_right) {
       BOOST_LOG(debug) << "Rumble: duplicate, not sending";
       return;
     }
 
-    auto msg = gamepad_feedback_msg_t::make_rumble(joypad->client_index, left_motor, right_motor);
+    auto msg = gamepad_feedback_msg_t::make_rumble(joypad->client_index, exaggerated_left, exaggerated_right);
     feedback_queue->raise(msg);
     joypad->last_rumble = msg;
     BOOST_LOG(info) << "Rumble feedback sent to client " << (int)joypad->client_index;
@@ -181,11 +186,28 @@ namespace platf::gamepad {
 
     if (left) {
       std::memcpy(left_data.data(), left->Data, 10);
-      BOOST_LOG(debug) << "Left trigger type=" << (int)type_left;
+      BOOST_LOG(debug) << "Left trigger type=" << (int)type_left
+                       << " data=[" << (int)left_data[0] << "," << (int)left_data[1] << "," << (int)left_data[2] << ",...]";
+
+      // EXAGGERATE: Override with maximum resistance feedback effect
+      // Type 0x01 = Feedback mode with full resistance
+      type_left = 0x01;
+      left_data[0] = 0;    // Start position (0 = beginning of trigger)
+      left_data[1] = 255;  // Force/strength (max)
+      for (int i = 2; i < 10; i++) left_data[i] = 255;  // Max everything
+      BOOST_LOG(warning) << "EXAGGERATED left trigger: type=1 (feedback), force=255";
     }
     if (right) {
       std::memcpy(right_data.data(), right->Data, 10);
-      BOOST_LOG(debug) << "Right trigger type=" << (int)type_right;
+      BOOST_LOG(debug) << "Right trigger type=" << (int)type_right
+                       << " data=[" << (int)right_data[0] << "," << (int)right_data[1] << "," << (int)right_data[2] << ",...]";
+
+      // EXAGGERATE: Override with maximum resistance feedback effect
+      type_right = 0x01;
+      right_data[0] = 0;    // Start position (0 = beginning of trigger)
+      right_data[1] = 255;  // Force/strength (max)
+      for (int i = 2; i < 10; i++) right_data[i] = 255;  // Max everything
+      BOOST_LOG(warning) << "EXAGGERATED right trigger: type=1 (feedback), force=255";
     }
 
     auto &joypad = ctx->second;

@@ -296,8 +296,14 @@ namespace platf::gamepad {
 
   void
   touch_winuhid(input_raw_t *raw, const gamepad_touch_t &touch) {
+    BOOST_LOG(debug) << "touch_winuhid called: gamepad=" << touch.id.globalIndex
+                     << " pointer=" << touch.pointerId
+                     << " x=" << touch.x << " y=" << touch.y
+                     << " pressure=" << touch.pressure;
+
     auto joypad = std::static_pointer_cast<winuhid_joypad_state>(raw->gamepads[touch.id.globalIndex]);
     if (!joypad || !joypad->device) {
+      BOOST_LOG(warning) << "touch_winuhid: joypad not found for gamepad " << touch.id.globalIndex;
       return;
     }
 
@@ -315,6 +321,8 @@ namespace platf::gamepad {
       USHORT x = static_cast<USHORT>(touch.x * touchpad_width);
       USHORT y = static_cast<USHORT>(touch.y * touchpad_height);
 
+      BOOST_LOG(debug) << "Touch down: finger=" << (int)touch_index << " pos=(" << x << "," << y << ")";
+
       joypad->touches[touch_index].active = true;
       joypad->touches[touch_index].x = x;
       joypad->touches[touch_index].y = y;
@@ -322,6 +330,7 @@ namespace platf::gamepad {
       WinUHidPS5SetTouchState(&joypad->report, touch_index, TRUE, x, y);
     } else {
       // Touch up
+      BOOST_LOG(debug) << "Touch up: finger=" << (int)touch_index;
       joypad->touches[touch_index].active = false;
       WinUHidPS5SetTouchState(&joypad->report, touch_index, FALSE, 0, 0);
     }

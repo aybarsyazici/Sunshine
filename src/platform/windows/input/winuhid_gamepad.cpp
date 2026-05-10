@@ -18,8 +18,22 @@
 
 #include <memory>
 #include <mutex>
+#include <cmath>
 
 using namespace std::literals;
+
+namespace platf {
+  // Forward declare input_raw_t from input.cpp
+  struct input_raw_t {
+    void *vigem;
+    std::vector<std::shared_ptr<void>> gamepads;
+  };
+
+  // Helper function to convert degrees to radians
+  inline float deg2rad(float degrees) {
+    return degrees * (M_PI / 180.0f);
+  }
+}
 
 namespace platf::gamepad {
 
@@ -54,25 +68,25 @@ namespace platf::gamepad {
     auto flags = gamepad_state.buttonFlags;
 
     // Face buttons
-    report->ButtonCross = (flags & X) ? 1 : 0;
+    report->ButtonCross = (flags & A) ? 1 : 0;
     report->ButtonCircle = (flags & B) ? 1 : 0;
-    report->ButtonSquare = (flags & Y) ? 1 : 0;
-    report->ButtonTriangle = (flags & A) ? 1 : 0;
+    report->ButtonSquare = (flags & X) ? 1 : 0;
+    report->ButtonTriangle = (flags & Y) ? 1 : 0;
 
     // Shoulder buttons
-    report->ButtonL1 = (flags & LB) ? 1 : 0;
-    report->ButtonR1 = (flags & RB) ? 1 : 0;
+    report->ButtonL1 = (flags & LEFT_BUTTON) ? 1 : 0;
+    report->ButtonR1 = (flags & RIGHT_BUTTON) ? 1 : 0;
 
     // Stick buttons
-    report->ButtonL3 = (flags & LS) ? 1 : 0;
-    report->ButtonR3 = (flags & RS) ? 1 : 0;
+    report->ButtonL3 = (flags & LEFT_STICK) ? 1 : 0;
+    report->ButtonR3 = (flags & RIGHT_STICK) ? 1 : 0;
 
     // System buttons
     report->ButtonShare = (flags & BACK) ? 1 : 0;
     report->ButtonOptions = (flags & START) ? 1 : 0;
     report->ButtonHome = (flags & HOME) ? 1 : 0;
-    report->ButtonTouchpad = (flags & PADDLE1) ? 1 : 0;  // Map touchpad click to PADDLE1
-    report->ButtonMute = (flags & MISC) ? 1 : 0;  // Map mute to MISC
+    report->ButtonTouchpad = (flags & TOUCHPAD_BUTTON) ? 1 : 0;
+    report->ButtonMute = (flags & MISC_BUTTON) ? 1 : 0;
 
     // D-pad via hat switch
     int hat_x = 0, hat_y = 0;
@@ -215,8 +229,8 @@ namespace platf::gamepad {
     );
 
     if (!joypad->device) {
-      DWORD error = GetLastError();
-      BOOST_LOG(error) << "Failed to create WinUHid PS5 gamepad: error " << error;
+      DWORD last_error = GetLastError();
+      BOOST_LOG(error) << "Failed to create WinUHid PS5 gamepad: error " << last_error;
       delete callback_context;
       return -1;
     }
@@ -324,9 +338,9 @@ namespace platf::gamepad {
       case LI_MOTION_TYPE_GYRO:
         // Gyroscope: Sunshine provides deg/s, WinUHid expects rad/s
         WinUHidPS5SetGyroState(&joypad->report,
-          deg2rad(motion.x),
-          deg2rad(motion.y),
-          deg2rad(motion.z));
+          platf::deg2rad(motion.x),
+          platf::deg2rad(motion.y),
+          platf::deg2rad(motion.z));
         break;
     }
   }

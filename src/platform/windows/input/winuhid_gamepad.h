@@ -6,46 +6,46 @@
 
 #include "src/platform/common.h"
 
-// Forward declare input_raw_t from the platform implementation
-struct input_raw_t;
-
 namespace platf {
+  // Forward declare input_raw_t defined in input.cpp
+  struct input_raw_t;
+
   namespace gamepad {
-  /**
-   * Allocate a new gamepad using WinUHid backend.
-   */
-  int
-  alloc_winuhid(input_raw_t *raw, const gamepad_id_t &id, const gamepad_arrival_t &metadata, feedback_queue_t feedback_queue);
+    /**
+     * Allocate a new gamepad using WinUHid backend.
+     */
+    int
+    alloc_winuhid(input_raw_t *raw, const gamepad_id_t &id, const gamepad_arrival_t &metadata, feedback_queue_t feedback_queue);
 
-  /**
-   * Free a WinUHid gamepad.
-   */
-  void
-  free_winuhid(input_raw_t *raw, int nr);
+    /**
+     * Free a WinUHid gamepad.
+     */
+    void
+    free_winuhid(input_raw_t *raw, int nr);
 
-  /**
-   * Update gamepad state (buttons, sticks, triggers).
-   */
-  void
-  update_winuhid(input_raw_t *raw, int nr, const gamepad_state_t &gamepad_state);
+    /**
+     * Update gamepad state (buttons, sticks, triggers).
+     */
+    void
+    update_winuhid(input_raw_t *raw, int nr, const gamepad_state_t &gamepad_state);
 
-  /**
-   * Update touchpad state.
-   */
-  void
-  touch_winuhid(input_raw_t *raw, const gamepad_touch_t &touch);
+    /**
+     * Update touchpad state.
+     */
+    void
+    touch_winuhid(input_raw_t *raw, const gamepad_touch_t &touch);
 
-  /**
-   * Update motion sensor state (accelerometer, gyroscope).
-   */
-  void
-  motion_winuhid(input_raw_t *raw, const gamepad_motion_t &motion);
+    /**
+     * Update motion sensor state (accelerometer, gyroscope).
+     */
+    void
+    motion_winuhid(input_raw_t *raw, const gamepad_motion_t &motion);
 
-  /**
-   * Update battery state.
-   */
-  void
-  battery_winuhid(input_raw_t *raw, const gamepad_battery_t &battery);
+    /**
+     * Update battery state.
+     */
+    void
+    battery_winuhid(input_raw_t *raw, const gamepad_battery_t &battery);
 
   }  // namespace gamepad
 }  // namespace platf

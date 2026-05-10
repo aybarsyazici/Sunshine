@@ -4,6 +4,13 @@ install(TARGETS sunshine RUNTIME DESTINATION "." COMPONENT application)
 # Hardening: include zlib1.dll (loaded via LoadLibrary() in openssl's libcrypto.a)
 install(FILES "${ZLIB}" DESTINATION "." COMPONENT application)
 
+# WinUHid DLLs for DS5 gamepad support
+install(FILES
+        "${CMAKE_SOURCE_DIR}/third-party/winuhid/bin/WinUHid.dll"
+        "${CMAKE_SOURCE_DIR}/third-party/winuhid/bin/WinUHidDevs.dll"
+        DESTINATION "."
+        COMPONENT application)
+
 # ARM64: include minhook-detours DLL (shared library for ARM64)
 if(NOT CMAKE_SYSTEM_PROCESSOR MATCHES "AMD64" AND DEFINED _MINHOOK_DLL)
     install(FILES "${_MINHOOK_DLL}" DESTINATION "." COMPONENT application)

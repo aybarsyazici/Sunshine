@@ -47,7 +47,7 @@ jobs:
         run: |
           mkdir build
           cd build
-          cmake -G Ninja -DBUILD_DOCS=OFF ..
+          cmake -G Ninja -DBUILD_DOCS=OFF -DSUNSHINE_BUILD_WEBUI=OFF ..
           ninja
           
       - name: Package

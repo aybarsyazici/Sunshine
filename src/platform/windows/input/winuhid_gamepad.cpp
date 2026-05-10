@@ -41,6 +41,7 @@ namespace platf::gamepad {
     PWINUHID_PS5_GAMEPAD device = nullptr;
     WINUHID_PS5_INPUT_REPORT report = {};
     std::mutex report_mutex;
+    uint8_t client_index = 0;  // Store client-relative index for feedback
 
     // Track last feedback to avoid duplicate sends
     gamepad_feedback_msg_t last_rumble {};
@@ -101,7 +102,11 @@ namespace platf::gamepad {
   // Sunshine: int16_t range [-32768, 32767], centered at 0
   // PS5: uint8_t range [0, 255], centered at 0x80 (128)
   static UCHAR
-  convert_stick_axis(std::int16_t axis) {
+  convert_stick_axis(std::int16_t axis, bool invert_y = false) {
+    // Invert Y-axis if requested (standard gamepad convention: up = negative)
+    if (invert_y) {
+      axis = -axis;
+    }
     // Scale from [-32768, 32767] to [0, 255]
     // Add 32768 to shift to [0, 65535], then divide by 256
     return static_cast<UCHAR>((axis + 32768) / 256);
@@ -121,7 +126,7 @@ namespace platf::gamepad {
       return;
     }
 
-    auto msg = gamepad_feedback_msg_t::make_rumble(0 /* idx will be filled by caller */, left_motor, right_motor);
+    auto msg = gamepad_feedback_msg_t::make_rumble(joypad->client_index, left_motor, right_motor);
     feedback_queue->raise(msg);
     joypad->last_rumble = msg;
   }
@@ -141,7 +146,7 @@ namespace platf::gamepad {
       return;
     }
 
-    auto msg = gamepad_feedback_msg_t::make_rgb_led(0 /* idx */, r, g, b);
+    auto msg = gamepad_feedback_msg_t::make_rgb_led(joypad->client_index, r, g, b);
     feedback_queue->raise(msg);
     joypad->last_rgb_led = msg;
   }
@@ -174,8 +179,9 @@ namespace platf::gamepad {
       std::memcpy(right_data.data(), right->Data, 10);
     }
 
+    auto &joypad = ctx->second;
     feedback_queue->raise(gamepad_feedback_msg_t::make_adaptive_triggers(
-      0 /* idx */, event_flags, type_left, type_right, left_data, right_data));
+      joypad->client_index, event_flags, type_left, type_right, left_data, right_data));
   }
 
   // Mic LED callback: not currently used by Sunshine
@@ -190,6 +196,7 @@ namespace platf::gamepad {
 
     // Create joypad state
     auto joypad = std::make_shared<winuhid_joypad_state>();
+    joypad->client_index = id.clientRelativeIndex;
 
     // Initialize input report
     WinUHidPS5InitializeInputReport(&joypad->report);
@@ -267,11 +274,11 @@ namespace platf::gamepad {
     // Map buttons
     map_buttons(gamepad_state, &joypad->report);
 
-    // Map analog sticks
-    joypad->report.LeftStickX = convert_stick_axis(gamepad_state.lsX);
-    joypad->report.LeftStickY = convert_stick_axis(gamepad_state.lsY);
-    joypad->report.RightStickX = convert_stick_axis(gamepad_state.rsX);
-    joypad->report.RightStickY = convert_stick_axis(gamepad_state.rsY);
+    // Map analog sticks (invert Y-axis: up = negative in gamepad convention)
+    joypad->report.LeftStickX = convert_stick_axis(gamepad_state.lsX, false);
+    joypad->report.LeftStickY = convert_stick_axis(gamepad_state.lsY, true);
+    joypad->report.RightStickX = convert_stick_axis(gamepad_state.rsX, false);
+    joypad->report.RightStickY = convert_stick_axis(gamepad_state.rsY, true);
 
     // Map triggers
     joypad->report.LeftTrigger = gamepad_state.lt;

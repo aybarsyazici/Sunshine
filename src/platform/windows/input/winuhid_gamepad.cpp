@@ -308,6 +308,7 @@ namespace platf::gamepad {
   touch_winuhid(input_raw_t *raw, const gamepad_touch_t &touch) {
     BOOST_LOG(debug) << "touch_winuhid called: gamepad=" << touch.id.globalIndex
                      << " pointer=" << touch.pointerId
+                     << " eventType=" << (int)touch.eventType
                      << " x=" << touch.x << " y=" << touch.y
                      << " pressure=" << touch.pressure;
 
@@ -326,12 +327,17 @@ namespace platf::gamepad {
     // Map pointer ID to touch index (0 or 1)
     UCHAR touch_index = touch.pointerId % 2;
 
-    if (touch.pressure > 0.5f) {
-      // Touch down
+    // Moonlight sends pressure=0 for all touch events (both down and move)
+    // Use eventType to determine touch state: 0x03 = UP, 0x00/0x01/0x02 = DOWN/MOVE
+    // Alternative: treat any packet with valid coordinates as active touch
+    bool touch_active = (touch.eventType != 0x03);  // 0x03 is LI_TOUCH_EVENT_UP
+
+    if (touch_active) {
+      // Touch down or move
       USHORT x = static_cast<USHORT>(touch.x * touchpad_width);
       USHORT y = static_cast<USHORT>(touch.y * touchpad_height);
 
-      BOOST_LOG(debug) << "Touch down: finger=" << (int)touch_index << " pos=(" << x << "," << y << ")";
+      BOOST_LOG(debug) << "Touch active: finger=" << (int)touch_index << " pos=(" << x << "," << y << ")";
 
       joypad->touches[touch_index].active = true;
       joypad->touches[touch_index].x = x;

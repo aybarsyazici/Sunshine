@@ -348,15 +348,18 @@ namespace platf::gamepad {
     switch (motion.motionType) {
       case LI_MOTION_TYPE_ACCEL:
         // Accelerometer: already in m/s^2, pass directly
+        BOOST_LOG(debug) << "Accel: x=" << motion.x << " y=" << motion.y << " z=" << motion.z;
         WinUHidPS5SetAccelState(&joypad->report, motion.x, motion.y, motion.z);
         break;
 
       case LI_MOTION_TYPE_GYRO:
         // Gyroscope: Sunshine provides deg/s, WinUHid expects rad/s
-        WinUHidPS5SetGyroState(&joypad->report,
-          platf::deg2rad(motion.x),
-          platf::deg2rad(motion.y),
-          platf::deg2rad(motion.z));
+        BOOST_LOG(debug) << "Gyro deg/s: x=" << motion.x << " y=" << motion.y << " z=" << motion.z;
+        float rad_x = platf::deg2rad(motion.x);
+        float rad_y = platf::deg2rad(motion.y);
+        float rad_z = platf::deg2rad(motion.z);
+        BOOST_LOG(debug) << "Gyro rad/s: x=" << rad_x << " y=" << rad_y << " z=" << rad_z;
+        WinUHidPS5SetGyroState(&joypad->report, rad_x, rad_y, rad_z);
         break;
     }
   }

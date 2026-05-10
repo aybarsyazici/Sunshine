@@ -6,7 +6,11 @@
 
 #include "src/platform/common.h"
 
-namespace platf::gamepad {
+// Forward declare input_raw_t from the platform implementation
+struct input_raw_t;
+
+namespace platf {
+  namespace gamepad {
   /**
    * Allocate a new gamepad using WinUHid backend.
    */
@@ -43,4 +47,5 @@ namespace platf::gamepad {
   void
   battery_winuhid(input_raw_t *raw, const gamepad_battery_t &battery);
 
-}  // namespace platf::gamepad
+  }  // namespace gamepad
+}  // namespace platf

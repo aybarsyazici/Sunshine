@@ -5,7 +5,7 @@ permissions: {}
 on:
   push:
     branches:
-      - master
+      - disabled-for-fork
     paths:
       - '.github/workflows/localize.yml'
       - 'src/**'

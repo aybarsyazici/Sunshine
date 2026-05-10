@@ -195,23 +195,23 @@ namespace platf::gamepad {
     WinUHidPS5InitializeInputReport(&joypad->report);
 
     // Set up device info
-    WINUHID_PS5_GAMEPAD_INFO info = {};
+    WINUHID_PS5_GAMEPAD_INFO device_info = {};
 
     // Generate MAC address based on gamepad index (similar to inputtino)
     if (!config::input.ds5_inputtino_randomize_mac && id.globalIndex >= 0 && id.globalIndex <= 255) {
       // Private virtual MAC: 02:00:00:00:00:XX where XX is the gamepad index
-      info.MacAddress[0] = 0x02;
-      info.MacAddress[1] = 0x00;
-      info.MacAddress[2] = 0x00;
-      info.MacAddress[3] = 0x00;
-      info.MacAddress[4] = 0x00;
-      info.MacAddress[5] = static_cast<UCHAR>(id.globalIndex);
+      device_info.MacAddress[0] = 0x02;
+      device_info.MacAddress[1] = 0x00;
+      device_info.MacAddress[2] = 0x00;
+      device_info.MacAddress[3] = 0x00;
+      device_info.MacAddress[4] = 0x00;
+      device_info.MacAddress[5] = static_cast<UCHAR>(id.globalIndex);
     } else {
       // Random MAC
       for (int i = 0; i < 6; i++) {
-        info.MacAddress[i] = static_cast<UCHAR>(rand() % 256);
+        device_info.MacAddress[i] = static_cast<UCHAR>(rand() % 256);
       }
-      info.MacAddress[0] = (info.MacAddress[0] & 0xFE) | 0x02;  // Set private bit
+      device_info.MacAddress[0] = (device_info.MacAddress[0] & 0xFE) | 0x02;  // Set private bit
     }
 
     // Create callback context (freed when joypad is destroyed)
@@ -219,7 +219,7 @@ namespace platf::gamepad {
 
     // Create WinUHid PS5 device
     joypad->device = WinUHidPS5Create(
-      &info,
+      &device_info,
       rumble_callback,
       lightbar_callback,
       player_led_callback,
